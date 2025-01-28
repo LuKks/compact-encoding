@@ -568,7 +568,7 @@ const anyArray = {
 
 const anyObject = {
   preencode (state, o) {
-    const keys = Object.keys(o)
+    const keys = objectKeysMinusFn(o)
     uint.preencode(state, keys.length)
     for (const key of keys) {
       utf8.preencode(state, key)
@@ -576,7 +576,7 @@ const anyObject = {
     }
   },
   encode (state, o) {
-    const keys = Object.keys(o)
+    const keys = objectKeysMinusFn(o)
     uint.encode(state, keys.length)
     for (const key of keys) {
       utf8.encode(state, key)
@@ -604,7 +604,9 @@ const anyTypes = [
   exports.float64,
   anyArray,
   anyObject,
-  exports.date
+  exports.date,
+  exports.biguint,
+  exports.bigint
 ]
 
 const any = exports.any = {
@@ -626,7 +628,7 @@ const any = exports.any = {
 }
 
 function getType (o) {
-  if (o === null || o === undefined) return 0
+  if (o === null || o === undefined || typeof o === 'function') return 0
   if (typeof o === 'boolean') return 1
   if (typeof o === 'string') return 2
   if (b4a.isBuffer(o)) return 3
@@ -637,6 +639,9 @@ function getType (o) {
   if (Array.isArray(o)) return 7
   if (o instanceof Date) return 9
   if (typeof o === 'object') return 8
+  if (typeof o === 'bigint') {
+    return o >= 0n ? 10 : 11
+  }
 
   throw new Error('Unsupported type for ' + o)
 }
@@ -763,4 +768,13 @@ function zigZagEncodeBigInt (n) {
 
 function validateUint (n) {
   if ((n >= 0) === false /* Handles NaN as well */) throw new Error('uint must be positive')
+}
+
+function objectKeysMinusFn (o) {
+  const keys = []
+  for (const key in o) {
+    if (typeof o[key] === 'function') continue
+    keys.push(key)
+  }
+  return keys
 }
